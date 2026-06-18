@@ -134,13 +134,16 @@ export default function Home({ videos: initialVideos, error, isUnlocked, expires
             <div className={styles.mainCol}>
               {current ? (
                 <div className={styles.playerCard}>
-                  <iframe
-                    key={current.id}
-                    src={current.playerUrl}
-                    className={styles.video}
-                    allow="encrypted-media; autoplay; fullscreen"
-                    allowFullScreen
-                  />
+                  <div className={styles.videoWrap}>
+                    <iframe
+                      key={current.id}
+                      src={current.playerUrl}
+                      className={styles.video}
+                      allow="encrypted-media; autoplay; fullscreen"
+                      allowFullScreen
+                      scrolling="no"
+                    />
+                  </div>
                   <div className={styles.playerInfo}>
                     <p className={styles.nowPlaying}>{current.title}</p>
                     <span className={styles.nowPlayingBadge}>এখন চলছে</span>
