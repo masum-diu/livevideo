@@ -1,74 +1,57 @@
-import fs from 'fs'
-import path from 'path'
+import { Redis } from '@upstash/redis'
 
-const DATA_DIR = path.join(process.cwd(), 'data')
-const STORE_PATH = path.join(DATA_DIR, 'unlocks.json')
-const PENDING_PATH = path.join(DATA_DIR, 'pending.json')
-const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN,
+})
 
-function readJSON(filePath) {
-  if (!fs.existsSync(filePath)) return []
-  return JSON.parse(fs.readFileSync(filePath, 'utf-8'))
-}
+const THIRTY_DAYS = 30 * 24 * 60 * 60
 
-function writeJSON(filePath, data) {
-  fs.mkdirSync(DATA_DIR, { recursive: true })
-  fs.writeFileSync(filePath, JSON.stringify(data, null, 2))
-}
-
-export function findActiveUnlock(phone) {
+export async function findActiveUnlock(phone) {
   if (!phone) return null
-  const records = readJSON(STORE_PATH)
-  const record = records.find((r) => r.phone === phone)
-  if (!record) return null
-  if (new Date(record.expiresAt).getTime() < Date.now()) return null
-  return record
+  const record = await redis.get(`unlock:${phone}`)
+  return record || null
 }
 
-export function isTxidUsed(txid) {
-  const unlocks = readJSON(STORE_PATH)
-  const pending = readJSON(PENDING_PATH)
-  return [...unlocks, ...pending].some((r) => r.txid === txid)
+export async function isTxidUsed(txid) {
+  const used = await redis.get(`txid:${txid}`)
+  return !!used
 }
 
-export function addPending(phone, txid) {
-  const records = readJSON(PENDING_PATH)
-  const existing = records.findIndex((r) => r.phone === phone)
+export async function addPending(phone, txid) {
   const record = { phone, txid, submittedAt: new Date().toISOString(), status: 'pending' }
-  if (existing >= 0) records[existing] = record
-  else records.push(record)
-  writeJSON(PENDING_PATH, records)
+  await redis.set(`pending:${phone}`, record)
+  await redis.set(`txid:${txid}`, '1')
   return record
 }
 
-export function getPending() {
-  return readJSON(PENDING_PATH).filter((r) => r.status === 'pending')
+export async function getPending() {
+  const keys = await redis.keys('pending:*')
+  if (!keys.length) return []
+  const records = await Promise.all(keys.map((k) => redis.get(k)))
+  return records.filter((r) => r?.status === 'pending')
 }
 
-export function approveUnlock(phone) {
-  const pending = readJSON(PENDING_PATH)
-  const idx = pending.findIndex((r) => r.phone === phone)
-  if (idx === -1) return null
+export async function approveUnlock(phone) {
+  const pending = await redis.get(`pending:${phone}`)
+  if (!pending) return null
 
-  pending[idx].status = 'approved'
-  writeJSON(PENDING_PATH, pending)
+  await redis.del(`pending:${phone}`)
 
-  const unlocks = readJSON(STORE_PATH)
-  const now = new Date()
-  const expiresAt = new Date(now.getTime() + THIRTY_DAYS_MS).toISOString()
-  const record = { phone, txid: pending[idx].txid, unlockedAt: now.toISOString(), expiresAt }
-  const existingIdx = unlocks.findIndex((r) => r.phone === phone)
-  if (existingIdx >= 0) unlocks[existingIdx] = record
-  else unlocks.push(record)
-  writeJSON(STORE_PATH, unlocks)
+  const record = {
+    phone,
+    txid: pending.txid,
+    unlockedAt: new Date().toISOString(),
+    expiresAt: new Date(Date.now() + THIRTY_DAYS * 1000).toISOString(),
+  }
+  await redis.set(`unlock:${phone}`, record, { ex: THIRTY_DAYS })
   return record
 }
 
-export function rejectUnlock(phone) {
-  const pending = readJSON(PENDING_PATH)
-  const idx = pending.findIndex((r) => r.phone === phone)
-  if (idx === -1) return false
-  pending[idx].status = 'rejected'
-  writeJSON(PENDING_PATH, pending)
+export async function rejectUnlock(phone) {
+  const pending = await redis.get(`pending:${phone}`)
+  if (!pending) return false
+  await redis.del(`pending:${phone}`)
+  await redis.del(`txid:${pending.txid}`)
   return true
 }

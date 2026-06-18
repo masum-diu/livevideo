@@ -10,7 +10,7 @@ const PRICE = 20
 
 export async function getServerSideProps({ req }) {
   const phone = req.cookies?.lv_phone || null
-  const unlock = findActiveUnlock(phone)
+  const unlock = await findActiveUnlock(phone)
 
   let videos = []
   let error = null
