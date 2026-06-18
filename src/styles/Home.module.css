@@ -705,3 +705,41 @@
   .grid { grid-template-columns: 1fr; }
   .popup { border-radius: 20px; }
 }
+
+/* ============================
+   TOAST BANNER
+=============================== */
+.toast {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  background: #fffbeb;
+  border: 1.5px solid #fde68a;
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  margin-bottom: 1.25rem;
+  font-size: 0.85rem;
+  color: #92400e;
+}
+
+.toastLeft {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex: 1;
+}
+
+.toastClose {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: #b45309;
+  padding: 0.2rem 0.35rem;
+  border-radius: 6px;
+  flex-shrink: 0;
+  transition: background 150ms;
+}
+
+.toastClose:hover { background: #fde68a; }

@@ -41,16 +41,39 @@ export default function Home({ videos: initialVideos, error, isUnlocked, expires
   const [unlockError, setUnlockError] = useState(null)
   const [showPopup, setShowPopup] = useState(false)
   const [submitted, setSubmitted] = useState(false)
-  const [checking, setChecking] = useState(false)
-  const [checkError, setCheckError] = useState(null)
   const [submittedPhone, setSubmittedPhone] = useState(null)
+  const pollRef = useRef(null)
+
+  useEffect(() => {
+    const saved = localStorage.getItem('lv_pending_phone')
+    if (saved) { setSubmittedPhone(saved); setSubmitted(true) }
+  }, [])
+
+  useEffect(() => {
+    if (!submitted || !submittedPhone) return
+    pollRef.current = setInterval(async () => {
+      try {
+        const res = await fetch('/api/check-access', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: submittedPhone }),
+        })
+        if (res.ok) {
+          clearInterval(pollRef.current)
+          localStorage.removeItem('lv_pending_phone')
+          window.location.reload()
+        }
+      } catch {}
+    }, 5000)
+    return () => clearInterval(pollRef.current)
+  }, [submitted, submittedPhone])
 
   function isLocked(index) {
     return !isUnlocked && index >= FREE_COUNT
   }
 
   function handleSelect(video, index) {
-    if (isLocked(index)) { setShowPopup(true); setSubmitted(false); setCheckError(null); return }
+    if (isLocked(index)) { setShowPopup(true); setUnlockError(null); return }
     setShowPopup(false)
     setCurrent(video)
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -71,47 +94,12 @@ export default function Home({ videos: initialVideos, error, isUnlocked, expires
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'আনলক ব্যর্থ হয়েছে')
       setSubmittedPhone(phone)
+      localStorage.setItem('lv_pending_phone', phone)
       setSubmitted(true)
+      setShowPopup(false)
     } catch (err) { setUnlockError(err.message) }
     finally { setUnlocking(false) }
   }
-
-  async function handleCheckAccess(e) {
-    e.preventDefault()
-    const phone = new FormData(e.target).get('phone')?.trim()
-    setChecking(true); setCheckError(null)
-    try {
-      const res = await fetch('/api/check-access', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error)
-      window.location.reload()
-    } catch (err) { setCheckError(err.message) }
-    finally { setChecking(false) }
-  }
-
-  const pollRef = useRef(null)
-
-  useEffect(() => {
-    if (!submitted || !submittedPhone) return
-    pollRef.current = setInterval(async () => {
-      try {
-        const res = await fetch('/api/check-access', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone: submittedPhone }),
-        })
-        if (res.ok) {
-          clearInterval(pollRef.current)
-          window.location.reload()
-        }
-      } catch {}
-    }, 5000)
-    return () => clearInterval(pollRef.current)
-  }, [submitted, submittedPhone])
 
   const VideoCard = ({ video, index, cardStyle, thumbStyle }) => {
     const locked = isLocked(index)
@@ -154,7 +142,6 @@ export default function Home({ videos: initialVideos, error, isUnlocked, expires
       </Head>
 
       <div className={styles.page}>
-        {/* Navbar */}
         <nav className={styles.navbar}>
           <div className={styles.logo}>
             <div className={styles.logoIcon}>▶</div>
@@ -169,9 +156,17 @@ export default function Home({ videos: initialVideos, error, isUnlocked, expires
             </p>
           )}
 
-          {/* Watch Layout */}
+          {submitted && !isUnlocked && (
+            <div className={styles.toast}>
+              <div className={styles.toastLeft}>
+                <div className={styles.spinner} />
+                <span>⏳ পেমেন্ট যাচাই হচ্ছে — অ্যাডমিন <strong>১০ মিনিটের মধ্যে</strong> অ্যাপ্রুভ করবেন। পেজ খোলা রাখুন।</span>
+              </div>
+              <button className={styles.toastClose} onClick={() => { setSubmitted(false); setSubmittedPhone(null); localStorage.removeItem('lv_pending_phone') }}>✕</button>
+            </div>
+          )}
+
           <div className={styles.watchLayout}>
-            {/* Player */}
             <div className={styles.mainCol}>
               {current ? (
                 <div className={styles.playerCard}>
@@ -197,7 +192,6 @@ export default function Home({ videos: initialVideos, error, isUnlocked, expires
               )}
             </div>
 
-            {/* Sidebar */}
             {videos.length > 0 && (
               <aside className={styles.sidebar} style={{ position: 'sticky', top: '80px', maxHeight: 'calc(100vh - 100px)' }}>
                 <div className={styles.sidebarHeader}>
@@ -237,7 +231,6 @@ export default function Home({ videos: initialVideos, error, isUnlocked, expires
             )}
           </div>
 
-          {/* Bottom Grid — mobile only */}
           {videos.length > 0 && (
             <div className={styles.bottomSection}>
               <div className={styles.gridHeader}>
@@ -258,60 +251,37 @@ export default function Home({ videos: initialVideos, error, isUnlocked, expires
             </div>
           )}
 
-          {/* Unlock Popup */}
           {showPopup && (
             <div className={styles.overlay} onClick={() => setShowPopup(false)}>
               <div className={styles.popup} onClick={(e) => e.stopPropagation()}>
                 <div className={styles.popupBanner}>
                   <div className={styles.popupBannerAccent} />
                   <button className={styles.popupClose} onClick={() => setShowPopup(false)}>✕</button>
-                  <div className={styles.popupLockCircle}>{submitted ? '⏳' : '🔒'}</div>
-                  <p className={styles.popupTitle}>{submitted ? 'রিকোয়েস্ট পাঠানো হয়েছে' : 'প্রিমিয়াম কনটেন্ট'}</p>
-                  <p className={styles.popupSubtitle}>{submitted ? 'অ্যাডমিন অ্যাপ্রুভ করলে অ্যাক্সেস পাবেন' : 'এই ভিডিওটি দেখতে আনলক করুন'}</p>
+                  <div className={styles.popupLockCircle}>🔒</div>
+                  <p className={styles.popupTitle}>প্রিমিয়াম কনটেন্ট</p>
+                  <p className={styles.popupSubtitle}>এই ভিডিওটি দেখতে আনলক করুন</p>
                 </div>
                 <div className={styles.popupBody}>
-                  {!submitted ? (
-                    <>
-                      <div className={styles.paymentCard}>
-                        <div className={styles.paymentCardLeft}>
-                          <span className={styles.paymentMethod}>bKash · Nagad · Rocket</span>
-                          <span className={styles.paymentNumber}>{PAYMENT_NUMBER}</span>
-                        </div>
-                        <span className={styles.paymentAmount}>{PRICE}৳</span>
-                      </div>
-                      <p className={styles.popupHint}>
-                        Send Money করুন, তারপর নিচে নম্বর ও Transaction ID দিন।<br />
-                        ৩০ দিনের জন্য সব ভিডিও আনলক হয়ে যাবে।
-                      </p>
-                      <div className={styles.divider} />
-                      <form className={styles.form} onSubmit={handleUnlock}>
-                        <input type="text" name="phone" placeholder="যে নম্বর থেকে পাঠিয়েছেন" className={styles.input} required />
-                        <input type="text" name="txid" placeholder="Transaction ID" className={styles.input} required />
-                        <button type="submit" className={styles.btn} disabled={unlocking}>
-                          {unlocking ? 'যাচাই হচ্ছে...' : 'আনলক করুন →'}
-                        </button>
-                        {unlockError && <p className={styles.error}>{unlockError}</p>}
-                      </form>
-                    </>
-                  ) : (
-                    <>
-                      <p className={styles.popupHint}>
-                        পেমেন্ট যাচাই হচ্ছে। অ্যাডমিন অ্যাপ্রুভ করলে স্বয়ংক্রিয়ভাবে অ্যাক্সেস পাবেন।
-                      </p>
-                      <div className={styles.waitingSpinner}>
-                        <div className={styles.spinner} />
-                        <span>অ্যাপ্রুভের অপেক্ষা করছে...</span>
-                      </div>
-                      <div className={styles.divider} />
-                      <form className={styles.form} onSubmit={handleCheckAccess}>
-                        <input type="text" name="phone" defaultValue={submittedPhone || ''} placeholder="আপনার নম্বর দিন" className={styles.input} required />
-                        <button type="submit" className={styles.btn} disabled={checking}>
-                          {checking ? 'চেক হচ্ছে...' : '✅ এখনই চেক করুন'}
-                        </button>
-                        {checkError && <p className={styles.error}>{checkError}</p>}
-                      </form>
-                    </>
-                  )}
+                  <div className={styles.paymentCard}>
+                    <div className={styles.paymentCardLeft}>
+                      <span className={styles.paymentMethod}>bKash · Nagad · Rocket</span>
+                      <span className={styles.paymentNumber}>{PAYMENT_NUMBER}</span>
+                    </div>
+                    <span className={styles.paymentAmount}>{PRICE}৳</span>
+                  </div>
+                  <p className={styles.popupHint}>
+                    Send Money করুন, তারপর নিচে নম্বর ও Transaction ID দিন।<br />
+                    ৩০ দিনের জন্য সব ভিডিও আনলক হয়ে যাবে।
+                  </p>
+                  <div className={styles.divider} />
+                  <form className={styles.form} onSubmit={handleUnlock}>
+                    <input type="text" name="phone" placeholder="যে নম্বর থেকে পাঠিয়েছেন" className={styles.input} required />
+                    <input type="text" name="txid" placeholder="Transaction ID" className={styles.input} required />
+                    <button type="submit" className={styles.btn} disabled={unlocking}>
+                      {unlocking ? 'যাচাই হচ্ছে...' : 'আনলক করুন →'}
+                    </button>
+                    {unlockError && <p className={styles.error}>{unlockError}</p>}
+                  </form>
                 </div>
               </div>
             </div>
