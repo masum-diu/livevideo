@@ -570,6 +570,34 @@
   margin: 1.1rem 0;
 }
 
+.waitingSpinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 0.85rem;
+  background: #f9f9f9;
+  border-radius: 10px;
+  margin-bottom: 0.75rem;
+  font-size: 0.85rem;
+  color: #666;
+  font-weight: 500;
+}
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2.5px solid #eee;
+  border-top-color: #0f0f0f;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 /* ============================
    FORMS
 =============================== */

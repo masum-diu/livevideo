@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Head from 'next/head'
 import styles from '@/styles/Home.module.css'
 import { getVideoDBConnection } from '@/lib/videodb'
@@ -43,6 +43,7 @@ export default function Home({ videos: initialVideos, error, isUnlocked, expires
   const [submitted, setSubmitted] = useState(false)
   const [checking, setChecking] = useState(false)
   const [checkError, setCheckError] = useState(null)
+  const [submittedPhone, setSubmittedPhone] = useState(null)
 
   function isLocked(index) {
     return !isUnlocked && index >= FREE_COUNT
@@ -69,7 +70,7 @@ export default function Home({ videos: initialVideos, error, isUnlocked, expires
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'আনলক ব্যর্থ হয়েছে')
-      setShowPopup(false)
+      setSubmittedPhone(phone)
       setSubmitted(true)
     } catch (err) { setUnlockError(err.message) }
     finally { setUnlocking(false) }
@@ -91,6 +92,26 @@ export default function Home({ videos: initialVideos, error, isUnlocked, expires
     } catch (err) { setCheckError(err.message) }
     finally { setChecking(false) }
   }
+
+  const pollRef = useRef(null)
+
+  useEffect(() => {
+    if (!submitted || !submittedPhone) return
+    pollRef.current = setInterval(async () => {
+      try {
+        const res = await fetch('/api/check-access', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: submittedPhone }),
+        })
+        if (res.ok) {
+          clearInterval(pollRef.current)
+          window.location.reload()
+        }
+      } catch {}
+    }, 5000)
+    return () => clearInterval(pollRef.current)
+  }, [submitted, submittedPhone])
 
   const VideoCard = ({ video, index, cardStyle, thumbStyle }) => {
     const locked = isLocked(index)
@@ -275,13 +296,17 @@ export default function Home({ videos: initialVideos, error, isUnlocked, expires
                   ) : (
                     <>
                       <p className={styles.popupHint}>
-                        পেমেন্ট যাচাই হচ্ছে। অ্যাডমিন অ্যাপ্রুভ করলে নিচের বাটনে ক্লিক করুন।
+                        পেমেন্ট যাচাই হচ্ছে। অ্যাডমিন অ্যাপ্রুভ করলে স্বয়ংক্রিয়ভাবে অ্যাক্সেস পাবেন।
                       </p>
+                      <div className={styles.waitingSpinner}>
+                        <div className={styles.spinner} />
+                        <span>অ্যাপ্রুভের অপেক্ষা করছে...</span>
+                      </div>
                       <div className={styles.divider} />
                       <form className={styles.form} onSubmit={handleCheckAccess}>
-                        <input type="text" name="phone" placeholder="আপনার নম্বর দিন" className={styles.input} required />
+                        <input type="text" name="phone" defaultValue={submittedPhone || ''} placeholder="আপনার নম্বর দিন" className={styles.input} required />
                         <button type="submit" className={styles.btn} disabled={checking}>
-                          {checking ? 'চেক হচ্ছে...' : '✅ আমার অ্যাক্সেস চেক করুন'}
+                          {checking ? 'চেক হচ্ছে...' : '✅ এখনই চেক করুন'}
                         </button>
                         {checkError && <p className={styles.error}>{checkError}</p>}
                       </form>
