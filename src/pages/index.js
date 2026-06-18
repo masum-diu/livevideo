@@ -92,7 +92,7 @@ export default function Home({ videos: initialVideos, error, isUnlocked, expires
         body: JSON.stringify({ phone, txid }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'আনলক ব্যর্থ হয়েছে')
+      if (!res.ok) throw new Error(data.error || 'Unlock failed')
       setSubmittedPhone(phone)
       localStorage.setItem('lv_pending_phone', phone)
       setSubmitted(true)
@@ -125,7 +125,7 @@ export default function Home({ videos: initialVideos, error, isUnlocked, expires
         <div className={styles.cardBody}>
           <p className={styles.cardTitle}>{video.title}</p>
           <span className={`${styles.cardTag} ${!locked ? styles.cardTagFree : ''}`}>
-            {locked ? '🔒 প্রিমিয়াম' : '✓ ফ্রি'}
+            {locked ? '🔒 Premium' : '✓ Free'}
           </span>
         </div>
       </button>
@@ -152,7 +152,7 @@ export default function Home({ videos: initialVideos, error, isUnlocked, expires
         <div className={styles.container}>
           {isUnlocked && (
             <p className={styles.statusActive}>
-              ✅ অ্যাক্সেস সক্রিয় — মেয়াদ: {new Date(expiresAt).toLocaleDateString('bn-BD')}
+              ✅ Access active — Expires: {new Date(expiresAt).toLocaleDateString('en-GB')}
             </p>
           )}
 
@@ -160,7 +160,7 @@ export default function Home({ videos: initialVideos, error, isUnlocked, expires
             <div className={styles.toast}>
               <div className={styles.toastLeft}>
                 <div className={styles.spinner} />
-                <span>⏳ পেমেন্ট যাচাই হচ্ছে — অ্যাডমিন <strong>১০ মিনিটের মধ্যে</strong> অ্যাপ্রুভ করবেন। পেজ খোলা রাখুন।</span>
+                <span>⏳ Payment submitted — Admin will approve within <strong>10 minutes</strong>. Keep this page open.</span>
               </div>
               <button className={styles.toastClose} onClick={() => { setSubmitted(false); setSubmittedPhone(null); localStorage.removeItem('lv_pending_phone') }}>✕</button>
             </div>
@@ -182,12 +182,12 @@ export default function Home({ videos: initialVideos, error, isUnlocked, expires
                   </div>
                   <div className={styles.playerInfo}>
                     <p className={styles.nowPlaying}>{current.title}</p>
-                    <span className={styles.nowPlayingBadge}>এখন চলছে</span>
+                    <span className={styles.nowPlayingBadge}>Now Playing</span>
                   </div>
                 </div>
               ) : (
                 <p className={styles.empty}>
-                  কোনো ভিডিও পাওয়া যায়নি। {error ? `(${error})` : ''}
+                  No videos found. {error ? `(${error})` : ''}
                 </p>
               )}
             </div>
@@ -195,7 +195,7 @@ export default function Home({ videos: initialVideos, error, isUnlocked, expires
             {videos.length > 0 && (
               <aside className={styles.sidebar} style={{ position: 'sticky', top: '80px', maxHeight: 'calc(100vh - 100px)' }}>
                 <div className={styles.sidebarHeader}>
-                  <p className={styles.sectionTitle}>সব ভিডিও · {videos.length}টি</p>
+                  <p className={styles.sectionTitle}>All Videos · {videos.length}</p>
                 </div>
                 <div className={styles.sideList}>
                   {videos.map((video, index) => {
@@ -221,7 +221,7 @@ export default function Home({ videos: initialVideos, error, isUnlocked, expires
                         </div>
                         <div className={styles.sideItemInfo}>
                           <p className={styles.sideTitle}>{video.title}</p>
-                          {locked && <span className={styles.sideLockTag}>🔒 প্রিমিয়াম</span>}
+                          {locked && <span className={styles.sideLockTag}>🔒 Premium</span>}
                         </div>
                       </button>
                     )
@@ -234,7 +234,7 @@ export default function Home({ videos: initialVideos, error, isUnlocked, expires
           {videos.length > 0 && (
             <div className={styles.bottomSection}>
               <div className={styles.gridHeader}>
-                <p className={styles.gridTitle}>সব ভিডিও</p>
+                <p className={styles.gridTitle}>All Videos</p>
                 <div className={styles.gridDivider} />
               </div>
               <div className={styles.grid}>
@@ -258,8 +258,8 @@ export default function Home({ videos: initialVideos, error, isUnlocked, expires
                   <div className={styles.popupBannerAccent} />
                   <button className={styles.popupClose} onClick={() => setShowPopup(false)}>✕</button>
                   <div className={styles.popupLockCircle}>🔒</div>
-                  <p className={styles.popupTitle}>প্রিমিয়াম কনটেন্ট</p>
-                  <p className={styles.popupSubtitle}>এই ভিডিওটি দেখতে আনলক করুন</p>
+                  <p className={styles.popupTitle}>Premium Content</p>
+                  <p className={styles.popupSubtitle}>Unlock to watch this video</p>
                 </div>
                 <div className={styles.popupBody}>
                   <div className={styles.paymentCard}>
@@ -270,15 +270,15 @@ export default function Home({ videos: initialVideos, error, isUnlocked, expires
                     <span className={styles.paymentAmount}>{PRICE}৳</span>
                   </div>
                   <p className={styles.popupHint}>
-                    Send Money করুন, তারপর নিচে নম্বর ও Transaction ID দিন।<br />
-                    ৩০ দিনের জন্য সব ভিডিও আনলক হয়ে যাবে।
+                    Send Money, then enter your number and Transaction ID below.<br />
+                    All videos will be unlocked for 30 days.
                   </p>
                   <div className={styles.divider} />
                   <form className={styles.form} onSubmit={handleUnlock}>
-                    <input type="text" name="phone" placeholder="যে নম্বর থেকে পাঠিয়েছেন" className={styles.input} required />
+                    <input type="text" name="phone" placeholder="Number you sent from" className={styles.input} required />
                     <input type="text" name="txid" placeholder="Transaction ID" className={styles.input} required />
                     <button type="submit" className={styles.btn} disabled={unlocking}>
-                      {unlocking ? 'যাচাই হচ্ছে...' : 'আনলক করুন →'}
+                      {unlocking ? 'Verifying...' : 'Unlock →'}
                     </button>
                     {unlockError && <p className={styles.error}>{unlockError}</p>}
                   </form>

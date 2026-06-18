@@ -47,11 +47,11 @@ export default function Admin({ isLoggedIn: initialLogin }) {
   async function handleUpload(e) {
     e.preventDefault()
     const formData = new FormData(e.target)
-    if (!formData.get('video')?.size) { setUploadMsg('ভিডিও ফাইল বেছে নিন'); return }
+    if (!formData.get('video')?.size) { setUploadMsg('Please select a video file'); return }
     setUploading(true); setUploadMsg('')
     const res = await fetch('/api/upload', { method: 'POST', body: formData })
     const data = await res.json()
-    setUploadMsg(res.ok ? `✅ "${data.title}" আপলোড হয়েছে!` : `❌ ${data.error}`)
+    setUploadMsg(res.ok ? `✅ "${data.title}" uploaded successfully!` : `❌ ${data.error}`)
     if (res.ok) e.target.reset()
     setUploading(false)
   }
@@ -59,8 +59,8 @@ export default function Admin({ isLoggedIn: initialLogin }) {
   useEffect(() => { if (loggedIn) loadPending() }, [loggedIn])
 
   const tabs = [
-    { key: 'payments', icon: '💳', label: 'পেমেন্ট', badge: pending.length },
-    { key: 'upload', icon: '📤', label: 'আপলোড' },
+    { key: 'payments', icon: '💳', label: 'Payments', badge: pending.length },
+    { key: 'upload', icon: '📤', label: 'Upload' },
   ]
 
   if (!loggedIn) return (
@@ -75,7 +75,7 @@ export default function Admin({ isLoggedIn: initialLogin }) {
             <input name="email" type="email" placeholder="Email" className={s.input} required />
             <input name="password" type="password" placeholder="Password" className={s.input} required />
             {loginError && <p className={s.error}>{loginError}</p>}
-            <button type="submit" className={s.btn}>লগইন করুন →</button>
+            <button type="submit" className={s.btn}>Login →</button>
           </form>
         </div>
       </div>
@@ -121,16 +121,16 @@ export default function Admin({ isLoggedIn: initialLogin }) {
             {tab === 'payments' && (
               <>
                 <div className={s.pageHeader}>
-                  <h2 className={s.pageTitle}>পেমেন্ট অনুরোধ</h2>
-                  <button onClick={loadPending} className={s.refreshBtn}>↻ রিফ্রেশ</button>
+                  <h2 className={s.pageTitle}>Payment Requests</h2>
+                  <button onClick={loadPending} className={s.refreshBtn}>↻ Refresh</button>
                 </div>
 
                 {loading ? (
-                  <p className={s.hint}>লোড হচ্ছে...</p>
+                  <p className={s.hint}>Loading...</p>
                 ) : pending.length === 0 ? (
                   <div className={s.emptyBox}>
                     <span style={{ fontSize: '2.5rem' }}>🎉</span>
-                    <p className={s.hint}>কোনো pending রিকোয়েস্ট নেই</p>
+                    <p className={s.hint}>No pending requests</p>
                   </div>
                 ) : (
                   <>
@@ -139,7 +139,7 @@ export default function Admin({ isLoggedIn: initialLogin }) {
                       <table className={s.table}>
                         <thead>
                           <tr>
-                            {['মোবাইল নম্বর', 'Transaction ID', 'সময়', 'অ্যাকশন'].map(h => (
+                            {['Phone Number', 'Transaction ID', 'Time', 'Action'].map(h => (
                               <th key={h} className={s.th}>{h}</th>
                             ))}
                           </tr>
@@ -149,11 +149,11 @@ export default function Admin({ isLoggedIn: initialLogin }) {
                             <tr key={p.phone} className={s.tr}>
                               <td className={s.td}><span className={s.phoneText}>{p.phone}</span></td>
                               <td className={s.td}><code className={s.txidText}>{p.txid}</code></td>
-                              <td className={s.td}><span className={s.timeText}>{new Date(p.submittedAt).toLocaleString('bn-BD')}</span></td>
+                              <td className={s.td}><span className={s.timeText}>{new Date(p.submittedAt).toLocaleString('en-GB')}</span></td>
                               <td className={s.td}>
                                 <div className={s.actions}>
-                                  <button className={s.approveBtn} onClick={() => handleAction(p.phone, 'approve')}>✓ অ্যাপ্রুভ</button>
-                                  <button className={s.rejectBtn} onClick={() => handleAction(p.phone, 'reject')}>✕ রিজেক্ট</button>
+                                  <button className={s.approveBtn} onClick={() => handleAction(p.phone, 'approve')}>✓ Approve</button>
+                                  <button className={s.rejectBtn} onClick={() => handleAction(p.phone, 'reject')}>✕ Reject</button>
                                 </div>
                               </td>
                             </tr>
@@ -168,12 +168,12 @@ export default function Admin({ isLoggedIn: initialLogin }) {
                         <div key={p.phone} className={s.payCard}>
                           <div className={s.payCardTop}>
                             <span className={s.payCardPhone}>{p.phone}</span>
-                            <span className={s.payCardTime}>{new Date(p.submittedAt).toLocaleDateString('bn-BD')}</span>
+                            <span className={s.payCardTime}>{new Date(p.submittedAt).toLocaleDateString('en-GB')}</span>
                           </div>
                           <code className={s.payCardTxid}>{p.txid}</code>
                           <div className={s.payCardActions}>
-                            <button className={s.approveBtn} onClick={() => handleAction(p.phone, 'approve')}>✓ অ্যাপ্রুভ</button>
-                            <button className={s.rejectBtn} onClick={() => handleAction(p.phone, 'reject')}>✕ রিজেক্ট</button>
+                            <button className={s.approveBtn} onClick={() => handleAction(p.phone, 'approve')}>✓ Approve</button>
+                            <button className={s.rejectBtn} onClick={() => handleAction(p.phone, 'reject')}>✕ Reject</button>
                           </div>
                         </div>
                       ))}
@@ -187,14 +187,14 @@ export default function Admin({ isLoggedIn: initialLogin }) {
             {tab === 'upload' && (
               <>
                 <div className={s.pageHeader}>
-                  <h2 className={s.pageTitle}>ভিডিও আপলোড</h2>
+                  <h2 className={s.pageTitle}>Upload Video</h2>
                 </div>
                 <div className={s.uploadCard}>
                   <form onSubmit={handleUpload} className={s.form}>
-                    <input type="text" name="name" placeholder="ভিডিওর নাম (ঐচ্ছিক)" className={s.input} />
+                    <input type="text" name="name" placeholder="Video name (optional)" className={s.input} />
                     <input type="file" name="video" accept="video/*" required className={s.fileInput} />
                     <button type="submit" className={s.btn} disabled={uploading}>
-                      {uploading ? 'আপলোড হচ্ছে...' : '📤 আপলোড করুন'}
+                      {uploading ? 'Uploading...' : '📤 Upload'}
                     </button>
                     {uploadMsg && <p className={uploadMsg.startsWith('✅') ? s.success : s.error}>{uploadMsg}</p>}
                   </form>
